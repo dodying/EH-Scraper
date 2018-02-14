@@ -12,6 +12,3 @@ An add-on script for ComicRack that lets you copy details from info.txt into you
 1. 选择书籍
 2. 点击工具栏EH图标
 3. 或是右键点击书籍，选择"自动化 -> EH Scraper"
-
-### ToDo
-- [ ] Tags中文化

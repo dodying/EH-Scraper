@@ -2,11 +2,11 @@
 # ==Headers==
 # @Name:               EH Scraper
 # @Description:        EH Scraper
-# @Version:            0.0.1
+# @Version:            1.0.0
 # @Author:             dodying
 # @Date:               2018-02-14 10:10:01
 # @Last Modified by:   dodying
-# @Last Modified time: 2018-02-14 12:08:42
+# @Last Modified time: 2018-02-14 22:23:18
 # @Namespace:          https://github.com/dodying/EH-Scraper
 # @SupportURL:         https://github.com/dodying/EH-Scraper/issues
 # @Import:
@@ -18,9 +18,10 @@
 #@Hook  Books
 
 import clr
+import re
 
 clr.AddReference("System")
-from System.IO import StreamReader
+from System.IO import StreamReader, Directory
 from System.Text import UTF8Encoding
 # from System.Net import WebRequest
 # from System.Text import Encoding
@@ -28,10 +29,14 @@ from System.Text import UTF8Encoding
 clr.AddReference("Ionic.Zip.dll")
 from Ionic.Zip import ZipFile
 
-# clr.AddReference('System.Web.Extensions')
-# from System.Web.Script.Serialization import JavaScriptSerializer
+clr.AddReference('System.Web.Extensions')
+from System.Web.Script.Serialization import JavaScriptSerializer
 
-import re
+_dir = Directory.GetParent(__file__).FullName
+EHT_File = open(_dir + '\\EHT.json', 'r')
+EHT = EHT_File.read()
+EHT_File.close()
+EHT = dict(JavaScriptSerializer().DeserializeObject(EHT))['dataset']
 
 def EH_Scraper(books):
   for book in books:
@@ -80,7 +85,7 @@ def parseInfoContent(text):
       break
 
   if 'parody' in b:
-    info['Series'] = b['parody']
+    info['Series'] = findData('parody', b['parody']) or b['parody']
 
   if 'Uploader Comment:' in a:
     if a.index('Tags:') >= 0 and a.index('Uploader Comment:') < a.index('Tags:'):
@@ -89,12 +94,12 @@ def parseInfoContent(text):
       info['Summary'] = '\n'.join(a[a.index('Uploader Comment:') :])
 
   if 'character' in b:
-    info['Characters'] = b['character']
+    info['Characters'] = findData('character', b['character']) or b['character']
 
   if 'artist' in b:
-    info['Writer'] = b['artist']
+    info['Writer'] = findData('artist', b['artist']) or b['artist']
   elif 'group' in b:
-    info['Writer'] = b['group']
+    info['Writer'] = findData('group', b['group']) or b['group']
 
   if re.search('FREE HENTAI', b['Category']):
     info['Genre'] = re.search('FREE HENTAI (.*?) GALLERY', b['Category']).group(1)
@@ -115,7 +120,9 @@ def parseInfoContent(text):
   for i in ['language', 'parody', 'character', 'group', 'artist', 'male', 'female', 'misc']:
     if i in b:
       t = re.compile(',(\s+|)').split(b[i])
-      info['Tags'] = info['Tags'] + dArr(i, t)
+      t = filter(lambda j: not(re.search('^\s+$', j)), t)
+      t = map(lambda j: (findData(i) or i) + ': ' + (findData(i, j) or j), t)
+      info['Tags'] = info['Tags'] + t
   if len(info['Tags']) > 0:
     info['Tags'] = ','.join(info['Tags'])
   else:
@@ -154,12 +161,24 @@ def scrapeFromEH(gid, token):
   data = dict(data['gmetadata'][0])
   return data
 
-def dArr(str, arr):
-  for i in arr:
-    if re.search('^\s+$', i):
-      del arr[arr.index(i)]
+def combineText(arr):
+  try:
+    arr = list(arr)
+  except:
+    return ''
+  else:
+    arr = filter(lambda i: i['type'] == 0, arr)
+    arr = map(lambda i: i['text'], arr)
+    return '\\A'.join(arr)
 
-  for i in arr:
-    arr[arr.index(i)] = str + ': ' + i
-  return arr
+def findData(main, sub = False):
+  data = filter(lambda i: i['name'] == main, EHT)
+  if len(data) == 0 or len(data[0]['tags']) == 0:
+    return {}
+  if sub == False:
+    return combineText(data[0]['cname']).decode('utf-8')
+  data = filter(lambda i: i['name'] == sub.replace('_', ' '), data[0]['tags'])
+  if len(data) == 0:
+    return {}
+  return combineText(data[0]['cname']).decode('utf-8')
 
