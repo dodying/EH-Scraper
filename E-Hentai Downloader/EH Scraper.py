@@ -48,8 +48,13 @@ def EH_Scraper(books):
           with StreamReader(zipfile[infoFile].OpenReader(), UTF8Encoding) as stream:
             contents = stream.ReadToEnd()
             info = parseInfoContent(contents)
-            for i in info:
-              setattr(book, i, info[i])
+            try:
+              info = parseInfoContent(contents)
+            except:
+              print
+            else:
+              for i in info:
+                setattr(book, i, info[i])
             # result = re.search('g/(\d+)/(\w+)/', contents)
             # gid = result.group(1)
             # token = result.group(2)
