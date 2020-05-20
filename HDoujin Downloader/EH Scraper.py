@@ -65,7 +65,7 @@ def parseInfoContent(text):
   for i in a:
     t = i.split(': ')
     if len(t) > 1:
-      b[t[0].lower()] = t[1]
+      b[t[0].lower()] = ':'.join(t[1:])
 
   print b
 
